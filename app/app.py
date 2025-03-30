@@ -1,24 +1,28 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_file, send_from_directory
 from flask_cors import CORS
 import yt_dlp
 import os
 import tempfile
 import uuid
 import re
-from flask import Flask, send_file, send_from_directory
+import shutil
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
+
+# CORS Configuration
 CORS(app, resources={ 
     r"/api/*": {
         "origins": [
             "http://localhost:8000",  # Frontend dev
-            "https://youtube-video-downloader-0xa1.onrender.com"  # Production
+            "https://youtube-video-downloader-7k2a.onrender.com"  # Production
         ]
     }
 })
 
+# Proxy Fix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
 ALLOWED_RESOLUTIONS = ["1080", "720", "480", "360", "144"]
 
 @app.route('/')
@@ -99,7 +103,7 @@ def download_video():
         "quiet": True,
         "postprocessors": [{
             "key": "FFmpegVideoConvertor",
-            "preferedformat": "mp4"
+            "preferredformat": "mp4"  # Fixed spelling error
         }]
     }
 
@@ -113,7 +117,7 @@ def download_video():
                     while chunk := f.read(4096 * 16):
                         yield chunk
                 os.remove(output_filename)
-                os.rmdir(temp_dir)
+                shutil.rmtree(temp_dir)  # Fixed directory cleanup
 
             return Response(
                 generate(),
@@ -125,10 +129,6 @@ def download_video():
             
     except Exception as e:
         return jsonify({"error": f"Download failed: {str(e)}"}), 500
-
-@app.route('/')
-def home():
-    return send_file('index.html')
 
 @app.route('/<path:filename>')
 def serve_file(filename):
