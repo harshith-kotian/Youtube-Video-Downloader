@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response, send_from_directory, render_template
+from flask import Flask, request, jsonify, Response, send_from_directory
 from flask_cors import CORS
 import yt_dlp
 import os
@@ -9,11 +9,7 @@ import shutil
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__, static_folder='frontend', static_url_path='/')
-CORS(app) 
-
-@app.route('/')
-def home():
-    return send_from_directory('frontend', 'index.html')
+CORS(app)
 
 # Proxy Fix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
@@ -22,7 +18,7 @@ ALLOWED_RESOLUTIONS = ["1080", "720", "480", "360", "144"]
 
 @app.route('/')
 def home():
-    return "TubeFetch Backend Running!"
+    return send_from_directory('frontend', 'index.html')
 
 @app.route('/api/info', methods=['GET'])
 def get_video_info():
@@ -30,9 +26,6 @@ def get_video_info():
     if not url:
         return jsonify({"error": "Missing URL"}), 400
 
-    # Remove extra parameters from URL if needed
-    url = url.split('?')[0]
-    
     print(f"Received URL: {url}")
     
     ydl_opts = {
@@ -133,8 +126,6 @@ def download_video():
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory('frontend', path)
-
-
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
