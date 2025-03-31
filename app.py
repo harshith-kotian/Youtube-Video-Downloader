@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response, send_file, send_from_directory, render_template
+from flask import Flask, request, jsonify, Response, send_from_directory
 from flask_cors import CORS
 import yt_dlp
 import os
@@ -10,13 +10,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__, static_folder='frontend', static_url_path='')
 
-# CORS Configuration
-
-CORS(app, resources={ 
-    r"/api/*": {
-        "origins": ["*"]  # Allows all origins
-    }
-})
+# Enable CORS for all routes
+CORS(app)
 
 # Proxy Fix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
@@ -24,12 +19,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 ALLOWED_RESOLUTIONS = ["1080", "720", "480", "360", "144"]
 
 @app.route('/')
-def serve_frontend():
-    return send_from_directory('frontend', 'index.html')
-
-@app.route('/<path:path>')
-def serve_static_files(path):
-    return send_from_directory('frontend', path)
+def home():
+    return "TubeFetch Backend Running!"
 
 @app.route('/api/info', methods=['GET'])
 def get_video_info():
@@ -37,6 +28,11 @@ def get_video_info():
     if not url:
         return jsonify({"error": "Missing URL"}), 400
 
+    # Remove extra parameters from URL if needed
+    url = url.split('?')[0]
+    
+    print(f"Received URL: {url}")
+    
     ydl_opts = {
         "quiet": True,
         "no_warnings": True,
@@ -85,6 +81,7 @@ def get_video_info():
             })
             
     except Exception as e:
+        print(f"Error fetching video info: {str(e)}")
         return jsonify({"error": f"Failed to get video info: {str(e)}"}), 500
 
 @app.route('/api/download', methods=['GET'])
@@ -124,13 +121,19 @@ def download_video():
             return Response(
                 generate(),
                 mimetype='video/mp4',
-                headers={
-                    'Content-Disposition': f'attachment; filename="{info["title"][:50]}.mp4"'
-                }
+                headers={'Content-Disposition': f'attachment; filename="{info["title"][:50]}.mp4"'}
             )
-            
+    
     except Exception as e:
+        print(f"Download error: {str(e)}")
         return jsonify({"error": f"Download failed: {str(e)}"}), 500
+
+@app.route('/<path:filename>')
+def serve_file(filename):
+    try:
+        return send_from_directory('.', filename)
+    except:
+        return "File not found", 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
