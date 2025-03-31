@@ -11,12 +11,10 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app = Flask(__name__, static_folder='frontend', static_url_path='')
 
 # CORS Configuration
+
 CORS(app, resources={ 
     r"/api/*": {
-        "origins": [
-            "http://localhost:8000",  # Frontend dev
-            "https://youtube-video-downloader-7k2a.onrender.com"  # Production
-        ]
+        "origins": ["*"]  # Allows all origins
     }
 })
 

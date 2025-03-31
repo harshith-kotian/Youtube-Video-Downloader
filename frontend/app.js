@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatList = document.getElementById('format-list');
     const errorMessage = document.getElementById('error-message');
 
-    const API_BASE_URL = 'https://youtube-video-downloader-0xa1.onrender.com';
+    const API_BASE_URL = 'https://youtube-video-downloader-7k2a.onrender.com';
 
     const formatDuration = (seconds) => {
         const minutes = Math.floor(seconds / 60);
