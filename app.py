@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response, send_from_directory
+from flask import Flask, request, jsonify, Response, send_from_directory, render_template
 from flask_cors import CORS
 import yt_dlp
 import os
@@ -8,10 +8,12 @@ import re
 import shutil
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-app = Flask(__name__, static_folder='frontend', static_url_path='')
+app = Flask(__name__, static_folder='frontend', static_url_path='/')
+CORS(app) 
 
-# Enable CORS for all routes
-CORS(app)
+@app.route('/')
+def home():
+    return send_from_directory('frontend', 'index.html')
 
 # Proxy Fix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
@@ -128,12 +130,11 @@ def download_video():
         print(f"Download error: {str(e)}")
         return jsonify({"error": f"Download failed: {str(e)}"}), 500
 
-@app.route('/<path:filename>')
-def serve_file(filename):
-    try:
-        return send_from_directory('.', filename)
-    except:
-        return "File not found", 404
+@app.route('/<path:path>')
+def serve_static(path):
+    return send_from_directory('frontend', path)
+
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
