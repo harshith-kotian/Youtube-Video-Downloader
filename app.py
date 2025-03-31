@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response, send_file, send_from_directory
+from flask import Flask, request, jsonify, Response, send_file, send_from_directory, render_template
 from flask_cors import CORS
 import yt_dlp
 import os
@@ -8,7 +8,7 @@ import re
 import shutil
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend', static_url_path='')
 
 # CORS Configuration
 CORS(app, resources={ 
@@ -26,8 +26,12 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 ALLOWED_RESOLUTIONS = ["1080", "720", "480", "360", "144"]
 
 @app.route('/')
-def home():
-    return "TubeFetch Backend Running!"
+def serve_frontend():
+    return send_from_directory('frontend', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static_files(path):
+    return send_from_directory('frontend', path)
 
 @app.route('/api/info', methods=['GET'])
 def get_video_info():
@@ -103,7 +107,7 @@ def download_video():
         "quiet": True,
         "postprocessors": [{
             "key": "FFmpegVideoConvertor",
-            "preferredformat": "mp4"  # Fixed spelling error
+            "preferredformat": "mp4"
         }]
     }
 
@@ -117,7 +121,7 @@ def download_video():
                     while chunk := f.read(4096 * 16):
                         yield chunk
                 os.remove(output_filename)
-                shutil.rmtree(temp_dir)  # Fixed directory cleanup
+                shutil.rmtree(temp_dir)
 
             return Response(
                 generate(),
@@ -129,13 +133,6 @@ def download_video():
             
     except Exception as e:
         return jsonify({"error": f"Download failed: {str(e)}"}), 500
-
-@app.route('/<path:filename>')
-def serve_file(filename):
-    try:
-        return send_from_directory('.', filename)
-    except:
-        return "File not found", 404
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

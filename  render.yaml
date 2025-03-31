@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: youtube-video-downloader
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PORT
+        value: 10000
+    plan: free
+    autoDeploy: true
