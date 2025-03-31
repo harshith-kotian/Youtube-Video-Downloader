@@ -1,59 +1,47 @@
-from flask import Flask, request, jsonify, Response, send_from_directory
-from flask_cors import CORS
 import requests
+import logging
+from flask import Flask, jsonify, request
 
-app = Flask(__name__, static_folder='frontend', static_url_path='/')
-CORS(app)
+# Initialize the Flask application
+app = Flask(__name__)
 
-INVIDIOUS_INSTANCE = "https://invidious.snopyta.org"  # Change if needed
-
-@app.route('/')
-def home():
-    return send_from_directory('frontend', 'index.html')
+# Enable logging for debugging
+logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/api/info', methods=['GET'])
 def get_video_info():
-    url = request.args.get('url')
-    if not url:
-        return jsonify({"error": "Missing URL"}), 400
-
-    # Extract video ID from URL
-    video_id = url.split("/")[-1].split("?")[0]
-
-    # Fetch video details from Invidious API
-    api_url = f"{INVIDIOUS_INSTANCE}/api/v1/videos/{video_id}"
-    response = requests.get(api_url)
-
-    if response.status_code != 200:
-        return jsonify({"error": "Failed to fetch video info"}), 500
-
-    data = response.json()
-
-    formats = [
-        {"quality": f["quality"], "url": f["url"]}
-        for f in data.get("formatStreams", []) if f.get("url")
-    ]
-
-    return jsonify({
-        "title": data["title"],
-        "channel": data["author"],
-        "duration": data["lengthSeconds"],
-        "thumbnail": data["videoThumbnails"][-1]["url"],
-        "formats": formats
-    })
-
-@app.route('/api/download', methods=['GET'])
-def download_video():
+    # Retrieve the YouTube video URL from the query parameters
     url = request.args.get('url')
 
+    # If URL is not provided, return an error
     if not url:
-        return jsonify({"error": "Missing video URL"}), 400
+        return jsonify({"error": "No URL provided"}), 400
 
-    return Response(
-        requests.get(url, stream=True).iter_content(4096),
-        mimetype="video/mp4",
-        headers={"Content-Disposition": "attachment; filename=video.mp4"}
-    )
+    try:
+        # Send a GET request to Invidious API to fetch video info
+        response = requests.get(f"https://api.invidious.io/api/v1/videos?url={url}")
+
+        # Log the response status and content for debugging
+        logging.debug(f"Response status code: {response.status_code}")
+        logging.debug(f"Response content: {response.text}")
+
+        # Check if the response status code is 200 (success)
+        if response.status_code == 200:
+            try:
+                # Try to parse the response as JSON
+                data = response.json()
+                return jsonify(data)  # Return the JSON data as a response
+            except ValueError:
+                # If response is not valid JSON, return an error message
+                return jsonify({"error": "Invalid JSON response from Invidious API"}), 500
+        else:
+            # If the API request failed, return an error with the status code
+            return jsonify({"error": "Failed to fetch data from Invidious API", "status_code": response.status_code}), 500
+    except requests.exceptions.RequestException as e:
+        # Handle exceptions related to the request (e.g., network issues)
+        return jsonify({"error": f"Request failed: {str(e)}"}), 500
+
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Run the app in debug mode for development
+    app.run(debug=True)
